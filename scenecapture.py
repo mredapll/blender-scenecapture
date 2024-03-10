@@ -4,34 +4,17 @@ Documentation:
 """
 
 import os
-import sys
-import platform
-import time
-import traceback
-import collections
+import json
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
-import re
-import json
-import uuid
-
-import math
-import shutil
-from functools import partial
-
 from Qt import QtCompat, QtCore, QtGui, QtWidgets
-
-from .ui.icons_rc import *
-
-# Import custom modules
-# from . import mjb_transform_ops
-# from . import preview_maya
 
 import bpy
 
 from .blender_helper import LaunchQtApp
 from . import api
+from .ui.icons_rc import *
 
 __version__ = "0.0.1"
 
@@ -108,6 +91,10 @@ class SceneCaptureUI(QtWidgets.QDialog):
         self.ui.import_pushButton.setIcon(QtGui.QIcon(':/icons/import.png'))
         self.ui.export_pushButton.setIcon(QtGui.QIcon(':/icons/export.png'))
         self.ui.delData_pushButton.setIcon(QtGui.QIcon(':/icons/delete.png'))
+
+        self.ui.filetype_comboBox.hide()
+        self.ui.setEditor_pushButton.hide()
+        self.ui.tabWidget.removeTab(2)
 
     def connect_signals(self):
 
