@@ -166,6 +166,7 @@ class SceneCaptureUI(QtWidgets.QDialog):
         data["thumbnail"] = thumbnail
         data["id"] = data_id
 
+        api.override_collect_data(self.current_collect, data)
         self.add_snapshot(data)
 
     def add_snapshot(self, data: Dict):
@@ -197,7 +198,8 @@ class SceneCaptureUI(QtWidgets.QDialog):
         ui_item.editTimer.setSingleShot(True)
 
         ui_item.mTe_comments.textChanged.connect(lambda: on_comment_changed(ui_item.editTimer))
-        ui_item.editTimer.timeout.connect(lambda: self.on_comment_finished(ui_item.mTe_comments, ui_item))
+        ui_item.editTimer.timeout.connect(
+            lambda: self.on_comment_finished(ui_item.mTe_comments, ui_item))
 
         ui_item.mBtn_N.clicked.connect(lambda: self.on_color_triggered(ui_item.mBtn_N, ui_item))
         ui_item.mBtn_R.clicked.connect(lambda: self.on_color_triggered(ui_item.mBtn_R, ui_item))
@@ -215,13 +217,31 @@ class SceneCaptureUI(QtWidgets.QDialog):
         self.current_camera = self.ui.snapCam_comboBox.currentText()
 
     def on_import_json(self):
-        pass
+        file_filter = "JSON Files (*.json)"
+        filepath = QtWidgets.QFileDialog.getOpenFileName(
+            self, "Import JSON", Constants.BackupDir, file_filter)
+
+        if not filepath:
+            return
+
+        with open(filepath[0], "r") as f:
+            api.set_all_collect_data(self.current_collect, json.load(f))
+        self.refresh()
 
     def on_export_json(self):
-        pass
+        data = api.get_all_collect_data(self.current_collect)
+
+        file_filter = "JSON Files (*.json)"
+        filepath = QtWidgets.QFileDialog.getSaveFileName(
+            self, "Export JSON", Constants.BackupDir, file_filter)
+        if not filepath:
+            return
+        with open(filepath[0], "w") as f:
+            json.dump(data, f)
 
     def on_delete_data(self):
-        pass
+        api.clear_all_collect_data(self.current_collect)
+        self.refresh()
 
     def on_apply_snapshot(self, ui_item):
         data = ui_item.property(Constants.CaptureId).get('data', {})
@@ -260,5 +280,3 @@ class SceneCaptureUI(QtWidgets.QDialog):
         api.override_collect_data(self.current_collect, data)
 
         ui_item.capture_toolButton.setIcon(QtGui.QPixmap(thumbnail))
-
-

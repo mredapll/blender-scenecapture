@@ -178,6 +178,48 @@ def get_collect_data(collect_name: str) -> Dict:
     return json.loads(str(collect_data_str))
 
 
+def clear_all_collect_data(collect_name):
+    collect = bpy.data.collections.get(collect_name)
+
+    if not collect:
+        print("Not valid collection name: {}".format(collect_name))
+        return
+    collect[Constants.CollectAttr] = "{}"
+
+
+
+def set_all_collect_data(collect_name, data):
+    collect = bpy.data.collections.get(collect_name)
+
+    if not collect:
+        print("Not valid collection name: {}".format(collect_name))
+        return
+
+    collect_data_str = collect.get(Constants.CollectAttr)
+
+    if not collect_data_str:
+        collect[Constants.CollectAttr] = "{}"
+
+    collect[Constants.CollectAttr] = json.dumps(data)
+
+
+def get_all_collect_data(collect_name) -> Dict:
+    collect = bpy.data.collections.get(collect_name)
+
+    if not collect:
+        print("Not valid collection name: {}".format(collect_name))
+        return {}
+
+    collect_data_str = collect.get(Constants.CollectAttr)
+
+    if not collect_data_str:
+        collect[Constants.CollectAttr] = "{}"
+
+    collect_data_str = collect.get(Constants.CollectAttr)
+    return json.loads(str(collect_data_str))
+
+
+
 def capture_viewport(context, snap_id, camera="PERSP"):
     file_path = os.path.join(Constants.BackupDir, "screenshot", f"snap_{snap_id}.png")
     sce = context.scene.name
