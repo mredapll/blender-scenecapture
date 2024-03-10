@@ -1,0 +1,12 @@
+<RCC>
+  <qresource prefix="icons">
+    <file>capture.png</file>
+    <file>copy.png</file>
+    <file>delete.png</file>
+    <file>export.png</file>
+    <file>import.png</file>
+    <file>paste.png</file>
+    <file>render.png</file>
+    <file>swap.png</file>
+  </qresource>
+</RCC>
