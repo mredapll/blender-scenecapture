@@ -11,22 +11,31 @@ from typing import Dict
 import bpy
 
 
-def get_pwd():
-    try:
-        if hasattr(bpy.data, "filepath"):
-            return os.path.dirname(bpy.data.filepath)
-        return os.path.dirname(bpy.data.filepath)
-    except:
-        raise AssertionError("Save The File First.")
-
-
 class Constants:
+    @staticmethod
+    def get_pwd():
+        try:
+            if hasattr(bpy.data, "filepath") and bpy.data.filepath:
+                return os.path.dirname(bpy.data.filepath)
+            else:
+                raise ValueError("Save The File First.")
+        except ValueError as e:
+            print(e)
+            return ""
+
+    @classmethod
+    def update_dirs(cls):
+        cls.BackupDir = os.path.join(Constants.get_pwd(), "backups")
+        cls.RenderDir = os.path.join(Constants.get_pwd(), "render")
+
     Attributes = [
         "location",
         "rotation_euler",
         "scale",
     ]
+
     BackupDir = os.path.join(get_pwd(), "backups")
+    RenderDir = os.path.join(get_pwd(), "render")
     BaseFileName = "snapshot"
     CollectAttr = "ppl_scene_data"
     CaptureId = "1"
@@ -226,6 +235,7 @@ def get_all_collect_data(collect_name) -> Dict:
 
 
 def capture_viewport(context, snap_id, camera="PERSP"):
+    Constants.update_dirs()
     file_path = os.path.join(Constants.BackupDir, "screenshot", f"snap_{snap_id}.png")
     sce = context.scene.name
     bpy.data.scenes[sce].render.filepath = file_path
@@ -254,12 +264,10 @@ def get_blender_exe():
 
 
 def get_output_render():
-    pwd = get_pwd()
-    render_dir = os.path.join(pwd, "render")
-    if not os.path.isdir(render_dir):
-        os.makedirs(render_dir)
-
-    return os.path.join(render_dir, "{name}.####.{ext}")
+    Constants.update_dirs()
+    if not os.path.isdir(Constants.RenderDir):
+        os.makedirs(Constants.RenderDir)
+    return os.path.join(Constants.RenderDir, "{name}.####.{ext}")
 
 
 def render_current_frame(data):

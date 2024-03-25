@@ -8,7 +8,7 @@ from . blender_helper import LaunchQtApp, TopbarPLL, draw_pll_menu
 from . scenecapture import LaunchScreenCapture, SceneCaptureUI
 
 bl_info = {
-    "name": "RFH",
+    "name": "RFH Blender Scene Capture",
     "category": "Object",
     "version": (0, 1, 0),
     "author": "Pixel Logic Link",

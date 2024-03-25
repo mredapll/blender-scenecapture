@@ -104,6 +104,7 @@ class SceneCaptureUI(QtWidgets.QDialog):
         self.ui.render_button.clicked.connect(self.on_render)
 
         self.ui.set_comboBox.currentIndexChanged.connect(self.on_collect_cb_changed)
+        self.ui.snapCam_comboBox.currentIndexChanged.connect(self.on_camera_cb_changed)
 
     def refresh(self):
 
@@ -200,6 +201,7 @@ class SceneCaptureUI(QtWidgets.QDialog):
         self.current_camera = self.ui.snapCam_comboBox.currentText()
 
     def on_import_json(self):
+        api.Constants.update_dirs()
         file_filter = "JSON Files (*.json)"
         filepath = QtWidgets.QFileDialog.getOpenFileName(
             self, "Import JSON", api.Constants.BackupDir, file_filter)
@@ -212,6 +214,7 @@ class SceneCaptureUI(QtWidgets.QDialog):
         self.refresh()
 
     def on_export_json(self):
+        api.Constants.update_dirs()
         data = api.get_all_collect_data(self.current_collect)
 
         file_filter = "JSON Files (*.json)"
@@ -312,6 +315,7 @@ class SceneCaptureUI(QtWidgets.QDialog):
         for _id, data in all_data.items():
             if not data.get("render"):
                 continue
+
             # init render script
             data_c = data.copy()
             data_c["init_script"] = init_script.as_posix()
@@ -325,6 +329,8 @@ class SceneCaptureUI(QtWidgets.QDialog):
             if self.ui.render_overrideSize.isChecked():
                 data_c["res_h"] = self.ui.height_spinBox.value()
                 data_c["res_w"] = self.ui.width_spinBox.value()
+
+            data_c["camera"] = self.current_camera
 
             print("Current Render: ", data_c["name"])
             api.render_current_frame(data_c)

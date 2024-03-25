@@ -26,3 +26,5 @@ if "--" in sys.argv:
 
     if data.get("res_h"):
         bpy.context.scene.render.resolution_y = data.get("res_h")
+
+    bpy.context.scene.camera = bpy.data.objects.get(data.get("camera"))
