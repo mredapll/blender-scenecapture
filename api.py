@@ -6,6 +6,8 @@ import os
 import json
 import time
 import uuid
+import subprocess
+import shlex
 from typing import Dict
 import bpy
 
@@ -187,7 +189,6 @@ def clear_all_collect_data(collect_name):
     collect[Constants.CollectAttr] = "{}"
 
 
-
 def set_all_collect_data(collect_name, data):
     collect = bpy.data.collections.get(collect_name)
 
@@ -219,7 +220,6 @@ def get_all_collect_data(collect_name) -> Dict:
     return json.loads(str(collect_data_str))
 
 
-
 def capture_viewport(context, snap_id, camera="PERSP"):
     file_path = os.path.join(Constants.BackupDir, "screenshot", f"snap_{snap_id}.png")
     sce = context.scene.name
@@ -238,3 +238,38 @@ def capture_viewport(context, snap_id, camera="PERSP"):
     # bpy.context.scene.render.engine = "CYCLES"
     # bpy.ops.render.render(write_still=True)
     return file_path
+
+
+def get_current_frame():
+    return str(bpy.context.scene.frame_current)
+
+
+def get_blender_exe():
+    return str(bpy.app.binary_path)
+
+
+def get_output_render():
+    pwd = get_pwd()
+    render_dir = os.path.join(pwd, "render")
+    if not os.path.isdir(render_dir):
+        os.makedirs(render_dir)
+
+    return os.path.join(render_dir, "{name}.####.{ext}")
+
+
+def render_current_frame(data):
+    output = get_output_render()
+    output = output.format(name=data.get("name", "_"), ext="png")
+
+    cmd = []
+    cmd.extend([get_blender_exe()])
+    cmd.extend(["--background"])
+    cmd.extend(["-b", str(bpy.data.filepath)])
+    cmd.extend(["-P", data.get("init_script")])
+    cmd.extend(["-y"])
+    cmd.extend(["-o", output])
+    cmd.extend(["-F", "PNG"])
+    cmd.extend(["-f", get_current_frame()])
+    cmd.extend(["--", json.dumps(data)])
+    print(cmd)
+    subprocess.run(cmd)

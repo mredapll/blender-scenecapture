@@ -100,9 +100,9 @@ class SceneCaptureUI(QtWidgets.QDialog):
 
         # Connect signals & slots
         self.ui.capture_toolButton.clicked.connect(self.on_capture)
-        # self.ui.btn_renderNone.released.connect(partial(self.on_handle_render_state, 0))
-        # self.ui.btn_renderAll.released.connect(partial(self.on_handle_render_state, 1))
-        # self.ui.btn_renderInvert.released.connect(partial(self.on_handle_render_state, 2))
+        self.ui.btn_renderNone.released.connect(lambda: self.on_change_render_status(0))
+        self.ui.btn_renderAll.released.connect(lambda: self.on_change_render_status(1))
+        self.ui.btn_renderInvert.released.connect(lambda: self.on_change_render_status(2))
 
         # self.ui.captureName_lineEdit.returnPressed.connect()
         # self.ui.xformCopy_pushButton.clicked.connect()
@@ -112,6 +112,7 @@ class SceneCaptureUI(QtWidgets.QDialog):
         self.ui.import_pushButton.clicked.connect(self.on_import_json)
         self.ui.export_pushButton.clicked.connect(self.on_export_json)
         self.ui.delData_pushButton.clicked.connect(self.on_delete_data)
+        self.ui.render_button.clicked.connect(self.on_render)
 
         self.ui.set_comboBox.currentIndexChanged.connect(self.on_collect_cb_changed)
 
@@ -174,6 +175,7 @@ class SceneCaptureUI(QtWidgets.QDialog):
         ui_item.capture_toolButton.setText(data.get("time", ""))
         ui_item.mTe_comments.setPlainText(data.get("comment", ""))
         ui_item.mLb_colorFlag.setStyleSheet(data.get("color", ""))
+        ui_item.render_toolButton.setChecked(data.get("render", False))
 
         self.ui.captures_verticalLayout.addWidget(ui_item)
 
@@ -188,6 +190,10 @@ class SceneCaptureUI(QtWidgets.QDialog):
         ui_item.editTimer.timeout.connect(
             lambda: self.on_comment_finished(ui_item.mTe_comments, ui_item))
 
+        ui_item.name_lineEdit.textChanged.connect(lambda: on_comment_changed(ui_item.editTimer))
+        ui_item.editTimer.timeout.connect(
+            lambda: self.on_name_finished(ui_item))
+
         ui_item.mBtn_N.clicked.connect(lambda: self.on_color_triggered(ui_item.mBtn_N, ui_item))
         ui_item.mBtn_R.clicked.connect(lambda: self.on_color_triggered(ui_item.mBtn_R, ui_item))
         ui_item.mBtn_O.clicked.connect(lambda: self.on_color_triggered(ui_item.mBtn_O, ui_item))
@@ -196,6 +202,7 @@ class SceneCaptureUI(QtWidgets.QDialog):
 
         ui_item.delete_toolButton.clicked.connect(lambda: self.on_delete_widget_item(ui_item))
         ui_item.recap_toolButton.clicked.connect(lambda: self.on_recapture(ui_item))
+        ui_item.render_toolButton.toggled.connect(lambda: self.on_btn_render_pressed(ui_item))
 
     def on_collect_cb_changed(self):
         self.current_collect = self.ui.set_comboBox.currentText()
@@ -254,6 +261,15 @@ class SceneCaptureUI(QtWidgets.QDialog):
 
         api.override_collect_data(self.current_collect, data)
 
+    def on_name_finished(self, ui_item):
+
+        data = ui_item.property(Constants.CaptureId)
+        data["name"] = ui_item.name_lineEdit.text()
+
+        ui_item.setProperty(Constants.CaptureId, data)
+
+        api.override_collect_data(self.current_collect, data)
+
     def on_delete_widget_item(self, ui_item):
         data = ui_item.property(Constants.CaptureId)
         api.delete_collect_data(self.current_collect, data)
@@ -267,3 +283,60 @@ class SceneCaptureUI(QtWidgets.QDialog):
         api.override_collect_data(self.current_collect, data)
 
         ui_item.capture_toolButton.setIcon(QtGui.QPixmap(thumbnail))
+
+    def on_btn_render_pressed(self, ui_item):
+        data = ui_item.property(Constants.CaptureId)
+        is_render = ui_item.render_toolButton.isChecked()
+        data["render"] = is_render
+        api.override_collect_data(self.current_collect, data)
+
+    def on_change_render_status(self, status):
+
+        layout = self.ui.captures_verticalLayout
+        for i in reversed(range(layout.count())):
+            ui_item = layout.itemAt(i).widget()
+            if ui_item is None:
+                continue
+            # btn = ui_item.findChild(QtWidgets.QToolButton, "render_toolButton")
+
+            data = ui_item.property(Constants.CaptureId)
+            is_render = ui_item.render_toolButton.isChecked()
+            if status == 0:
+                # uncheck all
+                data["render"] = False
+
+            if status == 1:
+                # check all
+                data["render"] = True
+
+            if status == 2:
+                # toggle
+                data["render"] = not is_render
+
+            api.override_collect_data(self.current_collect, data)
+            ui_item.render_toolButton.setChecked(data["render"])
+
+    def on_render(self):
+        print("init rendering...")
+        all_data = api.get_all_collect_data(self.current_collect)
+        init_script = Path(os.path.dirname(__file__)).joinpath('init_script.py')
+        for _id, data in all_data.items():
+            if not data.get("render"):
+                continue
+            # init render script
+            data_c = data.copy()
+            data_c["init_script"] = init_script.as_posix()
+
+            # Output prefix
+            prefix = self.ui.path_lineEdit.text()
+            if prefix:
+                data_c["name"] = prefix+data.get("name")
+
+            # render overrides
+            if self.ui.render_overrideSize.isChecked():
+                data_c["res_h"] = self.ui.height_spinBox.value()
+                data_c["res_w"] = self.ui.width_spinBox.value()
+
+            print("Current Render: ", data_c["name"])
+            api.render_current_frame(data_c)
+
