@@ -28,18 +28,6 @@ def get_pwd():
         raise AssertionError("Save The File First.")
 
 
-class Constants:
-    WindowTitle = "RFH Scene Capture v" + __version__
-    Attributes = [
-        "location",
-        "rotation_euler",
-        "scale",
-    ]
-    BackupDir = os.path.join(get_pwd(), "backups")
-    BaseFileName = "snapshot",
-    CaptureId = "1"
-
-
 class LaunchScreenCapture(LaunchQtApp):
     bl_idname = "wm.pll_screencapture"
     bl_label = "Screen Capture..."
@@ -68,6 +56,7 @@ class SceneCaptureUI(QtWidgets.QDialog):
 
         self.current_collect = None
         self.current_camera = None
+        self.attrs = {}
 
         self.context = contex
         self.init_ui()
@@ -79,7 +68,7 @@ class SceneCaptureUI(QtWidgets.QDialog):
         with open(self.uiDir.joinpath('stylesheet.qss'), "r") as fh:
             self.setStyleSheet(fh.read())
 
-        self.setWindowTitle(Constants.WindowTitle)
+        self.setWindowTitle(api.Constants.WindowTitle.format(version=__version__))
         self.setWindowFlags(QtCore.Qt.Tool)
 
         self.setProperty("saveWindowPref", True)
@@ -93,6 +82,7 @@ class SceneCaptureUI(QtWidgets.QDialog):
         self.ui.delData_pushButton.setIcon(QtGui.QIcon(':/icons/delete.png'))
 
         self.ui.filetype_comboBox.hide()
+        self.ui.noWarnings_checkBox.hide()
         self.ui.setEditor_pushButton.hide()
         self.ui.tabWidget.removeTab(2)
 
@@ -104,10 +94,9 @@ class SceneCaptureUI(QtWidgets.QDialog):
         self.ui.btn_renderAll.released.connect(lambda: self.on_change_render_status(1))
         self.ui.btn_renderInvert.released.connect(lambda: self.on_change_render_status(2))
 
-        # self.ui.captureName_lineEdit.returnPressed.connect()
-        # self.ui.xformCopy_pushButton.clicked.connect()
-        # self.ui.xformPaste_pushButton.clicked.connect()
-        # self.ui.xformSwap_pushButton.clicked.connect()
+        self.ui.xformCopy_pushButton.clicked.connect(self.on_copy_transform)
+        self.ui.xformPaste_pushButton.clicked.connect(self.on_past_transform)
+        self.ui.xformSwap_pushButton.clicked.connect(self.on_swap_transform)
 
         self.ui.import_pushButton.clicked.connect(self.on_import_json)
         self.ui.export_pushButton.clicked.connect(self.on_export_json)
@@ -160,7 +149,7 @@ class SceneCaptureUI(QtWidgets.QDialog):
     def add_snapshot(self, data: Dict):
         ui_item = QtCompat.loadUi(self.uiDir.joinpath('capture_item.ui').as_posix())
 
-        ui_item.setProperty(Constants.CaptureId, data)
+        ui_item.setProperty(api.Constants.CaptureId, data)
 
         ui_item.recap_toolButton.setIcon(QtGui.QIcon(':/icons/capture.png'))
         ui_item.delete_toolButton.setIcon(QtGui.QIcon(':/icons/delete.png'))
@@ -213,7 +202,7 @@ class SceneCaptureUI(QtWidgets.QDialog):
     def on_import_json(self):
         file_filter = "JSON Files (*.json)"
         filepath = QtWidgets.QFileDialog.getOpenFileName(
-            self, "Import JSON", Constants.BackupDir, file_filter)
+            self, "Import JSON", api.Constants.BackupDir, file_filter)
 
         if not filepath:
             return
@@ -227,7 +216,7 @@ class SceneCaptureUI(QtWidgets.QDialog):
 
         file_filter = "JSON Files (*.json)"
         filepath = QtWidgets.QFileDialog.getSaveFileName(
-            self, "Export JSON", Constants.BackupDir, file_filter)
+            self, "Export JSON", api.Constants.BackupDir, file_filter)
         if not filepath:
             return
         with open(filepath[0], "w") as f:
@@ -238,46 +227,46 @@ class SceneCaptureUI(QtWidgets.QDialog):
         self.refresh()
 
     def on_apply_snapshot(self, ui_item):
-        data = ui_item.property(Constants.CaptureId).get('data', {})
+        data = ui_item.property(api.Constants.CaptureId).get('data', {})
         api.set_scene_data(data)
 
     def on_color_triggered(self, btn, ui_item):
         stylesheet = btn.styleSheet()
         ui_item.mLb_colorFlag.setStyleSheet(stylesheet)
 
-        data = ui_item.property(Constants.CaptureId)
+        data = ui_item.property(api.Constants.CaptureId)
         data["color"] = stylesheet
 
-        ui_item.setProperty(Constants.CaptureId, data)
+        ui_item.setProperty(api.Constants.CaptureId, data)
 
         api.override_collect_data(self.current_collect, data)
 
     def on_comment_finished(self, textedit, ui_item):
 
-        data = ui_item.property(Constants.CaptureId)
+        data = ui_item.property(api.Constants.CaptureId)
         data["comment"] = textedit.toPlainText()
 
-        ui_item.setProperty(Constants.CaptureId, data)
+        ui_item.setProperty(api.Constants.CaptureId, data)
 
         api.override_collect_data(self.current_collect, data)
 
     def on_name_finished(self, ui_item):
 
-        data = ui_item.property(Constants.CaptureId)
+        data = ui_item.property(api.Constants.CaptureId)
         data["name"] = ui_item.name_lineEdit.text()
 
-        ui_item.setProperty(Constants.CaptureId, data)
+        ui_item.setProperty(api.Constants.CaptureId, data)
 
         api.override_collect_data(self.current_collect, data)
 
     def on_delete_widget_item(self, ui_item):
-        data = ui_item.property(Constants.CaptureId)
+        data = ui_item.property(api.Constants.CaptureId)
         api.delete_collect_data(self.current_collect, data)
         ui_item.deleteLater()
 
     def on_recapture(self, ui_item):
 
-        data = ui_item.property(Constants.CaptureId)
+        data = ui_item.property(api.Constants.CaptureId)
         thumbnail = api.capture_viewport(self.context, data["id"])
         data["thumbnail"] = thumbnail
         api.override_collect_data(self.current_collect, data)
@@ -285,7 +274,7 @@ class SceneCaptureUI(QtWidgets.QDialog):
         ui_item.capture_toolButton.setIcon(QtGui.QPixmap(thumbnail))
 
     def on_btn_render_pressed(self, ui_item):
-        data = ui_item.property(Constants.CaptureId)
+        data = ui_item.property(api.Constants.CaptureId)
         is_render = ui_item.render_toolButton.isChecked()
         data["render"] = is_render
         api.override_collect_data(self.current_collect, data)
@@ -299,7 +288,7 @@ class SceneCaptureUI(QtWidgets.QDialog):
                 continue
             # btn = ui_item.findChild(QtWidgets.QToolButton, "render_toolButton")
 
-            data = ui_item.property(Constants.CaptureId)
+            data = ui_item.property(api.Constants.CaptureId)
             is_render = ui_item.render_toolButton.isChecked()
             if status == 0:
                 # uncheck all
@@ -330,7 +319,7 @@ class SceneCaptureUI(QtWidgets.QDialog):
             # Output prefix
             prefix = self.ui.path_lineEdit.text()
             if prefix:
-                data_c["name"] = prefix+data.get("name")
+                data_c["name"] = prefix + data.get("name")
 
             # render overrides
             if self.ui.render_overrideSize.isChecked():
@@ -340,3 +329,40 @@ class SceneCaptureUI(QtWidgets.QDialog):
             print("Current Render: ", data_c["name"])
             api.render_current_frame(data_c)
 
+    def on_swap_transform(self):
+        selection = api.get_selected()
+        if not (0 < len(selection) < 3):
+            return
+        obj1 = selection[0]
+        obj2 = selection[1]
+
+        temp_attrs = {}
+        for attr in api.Constants.Attributes:
+            temp_attrs[attr] = tuple(getattr(obj1, attr))
+
+        self.attrs = {}
+        for attr in api.Constants.Attributes:
+            self.attrs[attr] = tuple(getattr(obj2, attr))
+            obj2.__setattr__(attr, temp_attrs[attr])
+
+        for attr in api.Constants.Attributes:
+            obj1.__setattr__(attr, self.attrs[attr])
+
+    def on_past_transform(self):
+        selection = api.get_selected()
+        if not selection:
+            return
+
+        if not self.attrs:
+            return
+
+        for attr in api.Constants.Attributes:
+            selection[0].__setattr__(attr, self.attrs[attr])
+
+    def on_copy_transform(self):
+        selection = api.get_selected()
+        if not selection:
+            return
+
+        for attr in api.Constants.Attributes:
+            self.attrs[attr] = tuple(getattr(selection[0], attr))

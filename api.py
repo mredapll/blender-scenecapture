@@ -7,7 +7,6 @@ import json
 import time
 import uuid
 import subprocess
-import shlex
 from typing import Dict
 import bpy
 
@@ -30,6 +29,12 @@ class Constants:
     BackupDir = os.path.join(get_pwd(), "backups")
     BaseFileName = "snapshot"
     CollectAttr = "ppl_scene_data"
+    CaptureId = "1"
+    WindowTitle = "RFH Scene Capture v{version}"
+
+
+def get_selected():
+    return [obj for obj in bpy.data.objects if obj.select_get()]
 
 
 def get_collections():
