@@ -72,7 +72,9 @@ class BlenderApplication(QtWidgets.QApplication):
     @classmethod
     def get_app(cls):
         if cls._app is None:
-            cls._app = QtWidgets.QApplication(sys.argv)
+            cls._app = QtWidgets.QApplication.instance()
+            if not cls._app:
+                cls._app = QtWidgets.QApplication(sys.argv)
         return cls._app
 
     @classmethod
